@@ -73,3 +73,6 @@ data/**
 !data/prompts/
 !data/prompts/**
 resource/**
+
+# 个人学习/阅读笔记（本地保留，不提交）
+docs/study/

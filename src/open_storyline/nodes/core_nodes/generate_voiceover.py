@@ -39,6 +39,7 @@ class GenerateVoiceoverNode(BaseNode):
         "bytedance": "_tts_bytedance_sync",
         "minimax": "_tts_minimax_sync",
         "302": "_tts_302_sync",
+        "siliconflow": "_tts_siliconflow_sync",
     }
 
     _DEFAULT_PROVIDER = "minimax"
@@ -221,6 +222,8 @@ class GenerateVoiceoverNode(BaseNode):
             return "https://api.minimax.chat"
         if provider_name == "302":
             return "https://api.302.ai"
+        if provider_name == "siliconflow":
+            return "https://api.siliconflow.cn"
         return ""
 
     # ---------------------------------------------------------------------
@@ -648,4 +651,54 @@ class GenerateVoiceoverNode(BaseNode):
         resp = requests.post(api_url, headers=headers, json=body, timeout=120)
         if not resp.ok:
             raise RuntimeError(f"302 tts http {resp.status_code}: {resp.text}")
+        wav_path.write_bytes(resp.content)
+
+    def _tts_siliconflow_sync(
+        self,
+        *,
+        text: str,
+        wav_path: Path,
+        secrets: Dict[str, Any],
+        tts_params: Dict[str, Any],
+        provider_cfg: Dict[str, Any],
+    ) -> None:
+        """
+        硅基流动 SiliconFlow TTS：OpenAI 兼容接口 /v1/audio/speech
+        默认使用 CosyVoice2（FunAudioLLM/CosyVoice2-0.5B），返回完整音频字节。
+        """
+        base_url = (secrets.get("base_url") or "https://api.siliconflow.cn").rstrip("/")
+        # 允许 base_url 填域名、域名/v1、或完整端点三种写法
+        if base_url.endswith("/audio/speech"):
+            api_url = base_url
+        elif base_url.endswith("/v1"):
+            api_url = base_url + "/audio/speech"
+        else:
+            api_url = base_url + "/v1/audio/speech"
+
+        api_key = secrets.get("api_key")
+        if not api_key:
+            raise ValueError("siliconflow missing api_key")
+
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        }
+
+        body: Dict[str, Any] = {
+            "model": tts_params.get("model", "FunAudioLLM/CosyVoice2-0.5B"),
+            "input": text,
+            "voice": tts_params.get("voice", "FunAudioLLM/CosyVoice2-0.5B:alex"),
+            # 非流式请求，wav 为完整文件，可被 librosa 正确读取时长
+            "response_format": tts_params.get("response_format", "wav"),
+        }
+        # CosyVoice2 不支持 emotion 字段，这里只透传可选的 speed
+        if tts_params.get("speed") not in (None, ""):
+            body["speed"] = float(tts_params["speed"])
+
+        resp = requests.post(api_url, headers=headers, json=body, timeout=120)
+        if not resp.ok:
+            raise RuntimeError(f"siliconflow tts http {resp.status_code}: {resp.text[:500]}")
+        if not resp.content:
+            raise RuntimeError("siliconflow tts returned empty audio")
+
         wav_path.write_bytes(resp.content)

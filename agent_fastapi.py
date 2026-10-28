@@ -2361,6 +2361,7 @@ _PROVIDER_UI_LABEL_OVERRIDES = {
     "302": "302.AI",
     "bytedance": "字节跳动 ByteDance",
     "dashscope": "阿里万相 Wan",
+    "siliconflow": "硅基流动 SiliconFlow",
 }
 
 _PROVIDER_UI_LABEL_OVERRIDES_BY_SECTION = {
