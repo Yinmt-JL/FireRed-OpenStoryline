@@ -273,7 +273,6 @@ class ToolInterceptor:
                         default_collect_result = meta_collector.check_excutable(
                             session_id, store, default_require
                         )
-                        default_collect_result = meta_collector.check_excutable(session_id, store, default_require)
                         
                         # Recursively process dependencies
                         if default_collect_result['excutable']:
